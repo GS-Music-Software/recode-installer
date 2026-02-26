@@ -38,10 +38,15 @@ fn kill_running() {
     }
     #[cfg(target_os = "linux")]
     {
-        Command::new("pkill")
-            .args(["-f", consts::APP_ID])
-            .output()
-            .ok();
+        let own_pid = std::process::id();
+        if let Ok(out) = Command::new("pgrep").args(["-f", consts::APP_ID]).output() {
+            let pids = String::from_utf8_lossy(&out.stdout);
+            for pid in pids.split_whitespace() {
+                if pid.parse::<u32>().unwrap_or(0) != own_pid {
+                    Command::new("kill").arg(pid).output().ok();
+                }
+            }
+        }
         thread::sleep(Duration::from_millis(500));
     }
 }
